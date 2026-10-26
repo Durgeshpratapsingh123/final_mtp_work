@@ -1,0 +1,69 @@
+=== Overall ===
+Total events           : 270,950
+Capture duration       : 1260.6 s
+Throughput             : 214.9 events/s
+Mean latency           : 56.50 us
+Median latency         : 13.59 us
+p90 / p95              : 102.14 / 124.78 us
+p99 / p99.9            : 655.13 / 4445.81 us
+Min / Max              : 0.165 / 7384.18 us
+Events > 1ms / > 5ms   : 0.66% / 0.07%
+
+=== Per syscall ===
+          count  mean  median     p95      max
+syscall                                       
+openat   270950  56.5   13.59  124.78  7384.18
+
+=== Per process (top callers) ===
+                  count    mean  median      max
+comm                                            
+code             164315   51.01   21.26  6931.21
+ps                43648   51.87    4.09  5474.14
+python3           14327   37.48   11.77  6755.53
+redis-server      12563   93.53   84.11  6072.06
+systemd-oomd       6054   41.07   17.21  1978.27
+libuv-worker       5164   85.80   38.08  3706.49
+python             4056   38.62    6.05  4762.04
+WorkerThread       2685   49.77    9.68  3646.69
+MemoryInfra        1432   36.65    9.03  1259.63
+msedge             1426   29.17    9.37   906.20
+ThreadPoolForeg    1266   27.51    4.88   586.62
+exe                 990   31.79    5.93   994.38
+Chrome_ChildIOT     978   91.04   74.07  2429.89
+pip                 690   16.34    9.63   231.10
+Task Runner for     666  157.37   11.73  5282.16
+
+=== Bursts (>= 5 consecutive same-pid events within 2.0ms) ===
+ pid            comm  events  span_ms  mean_latency_us  max_latency_us
+8838           sleep     125     1.60          4698.15         7384.18
+9337    WorkerThread     220    28.34          1560.97         6931.21
+9360         python3      24    12.39          1235.92         6755.53
+3330    libuv-worker      26    15.01          1538.18         6305.80
+3330    libuv-worker      15     7.69          2593.82         6246.15
+3330    libuv-worker      49    19.94           471.39         5944.63
+3330    libuv-worker      29    12.12          1869.98         5828.72
+3330    libuv-worker      17     7.05           677.97         5628.66
+8441              ps    1312    21.85          1087.96         5474.14
+9337 Task Runner for      10     2.65          1492.68         5282.16
+3330    libuv-worker      45    20.55           925.99         5241.32
+3330            code      12     7.09          2157.23         5166.99
+9359          python      10     0.98          4299.44         4762.04
+3330            code      14     6.99           704.71         4637.62
+9355            code       5     2.42          2722.20         4604.64
+1239         upowerd      13     0.32          3833.42         4001.01
+7631      Compositor      13     2.30          1379.94         3759.36
+ 356 systemd-journal       8     0.15          3615.19         3690.94
+9374          python      27    11.90          1547.32         3605.36
+3330            code      86    28.38           456.76         3364.78
+
+=== Interpretation ===
+- Median latency (13.6us) reflects the steady-state cost the eBPF
+  Proxy Observer pipeline adds on top of the kernel event itself (ring-buffer
+  transit + poll-thread wakeup).
+- Mean (56.5us) is well above median -> right-skewed distribution;
+  a small tail of slow events pulls the average up.
+- The slowest events cluster into bursts from single processes (see table above),
+  i.e. tail latency looks like ring-buffer/poll-thread queuing under bursty load
+  rather than a fixed per-event cost.
+- Cite median/p90 for typical-case overhead, and the burst table for the
+  architecture's queuing behavior under load.
