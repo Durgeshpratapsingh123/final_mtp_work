@@ -1,1 +1,5 @@
 logs/latency_events.csv
+
+# Large generated latency logs
+logs/latency_events.csv
+logs/old/latency_events.csv
